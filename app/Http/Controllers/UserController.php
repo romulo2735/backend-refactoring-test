@@ -2,16 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreUserRequest;
+use App\Http\Requests\UpdateUserRequest;
 use App\Models\User;
+use App\Service\UserService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use OpenApi\Annotations as OA;
+use Symfony\Component\HttpFoundation\Response;
 
 class UserController extends Controller
 {
-    private User $user;
 
-    function __construct(User $user)
+    function __construct(protected UserService $userService)
     {
-        $this->user = $user;
     }
 
     /**
@@ -50,13 +54,15 @@ class UserController extends Controller
      */
     public function index(Request $request)
     {
-        return $this->user->get();
+        $users = $this->userService->getAllUsers();
+
+        return response()->json($users, Response::HTTP_OK);
     }
 
     /**
      * Show a specific user resource
      *
-     * @return User
+     * @return JsonResponse
      *
      * @OA\Get(
      *      path="/users/{id}",
@@ -90,13 +96,15 @@ class UserController extends Controller
      */
     public function show(User $user)
     {
-        return $user;
+        $user = $this->userService->getUser($user);
+
+        return response()->json($user, Response::HTTP_OK);
     }
 
     /**
      * Store a newly created user in storage.
      *
-     * @return User
+     * @return JsonResponse
      *
      * @OA\Post(
      *      path="/users",
@@ -126,21 +134,17 @@ class UserController extends Controller
      *      )
      * )
      */
-    public function store(Request $request)
+    public function store(StoreUserRequest $request)
     {
-        $data = $request->only([
-            'name',
-            'email',
-            'password',
-        ]);
+        $user = $this->userService->createUser($request->validated());
 
-        return $this->user->create($data);
+        return response()->json($user, Response::HTTP_CREATED);
     }
 
     /**
      * Update a specific user resource
      *
-     * @return User
+     * @return JsonResponse
      *
      * @OA\Put(
      *      path="/users/{id}",
@@ -176,23 +180,17 @@ class UserController extends Controller
      *      )
      * )
      */
-    public function update(Request $request, User $user)
+    public function update(User $user, UpdateUserRequest $request)
     {
-        $data = $request->only([
-            'name',
-            'email',
-            'password',
-        ]);
+        $user = $this->userService->updateUser($user, $request->validated());
 
-        $user->update($data);
-
-        return $user;
+        return response()->json($user, Response::HTTP_OK);
     }
 
     /**
      * Remove a specific user resource
      *
-     * @return User
+     * @return JsonResponse
      *
      * @OA\Delete(
      *      path="/users/{id}",
@@ -226,9 +224,8 @@ class UserController extends Controller
      */
     public function destroy(User $user)
     {
-        $user->delete();
-
-        return $user;
+        $this->userService->deleteUser($user);
+        return response()->json(null, Response::HTTP_NO_CONTENT);
     }
 }
 
